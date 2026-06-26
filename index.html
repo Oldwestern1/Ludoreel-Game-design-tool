@@ -316,16 +316,16 @@
         // Each entry is a function that takes up to two mechanic names and returns an HTML question string.
         // If a rolled theme matches one of these keys, the question gets appended to the generated prompt.
         const SCAMPER = {
-            "Substitute": (m1, m2) => m1 === m2 
-                ? How could you <span class="highlight">substitute</span> a core element or material within the ${m1} mechanic?
-                : How could you <span class="highlight">substitute</span> a core element or material within the ${m1} or ${m2} mechanics?,
-            "Combine": (m1, m2) => How could you <span class="highlight">combine</span> the ${m1} mechanic with components from an entirely different genre?,
-            "Adapt": (m1, m2) => How could you <span class="highlight">adapt</span> a mechanism from a classic parlor game into ${m1}?,
-            "Modify": (m1, m2) => How could you <span class="highlight">modify</span>, magnify, or minify the scale of components used in ${m1}?,
-            "Put to another use": (m1, m2) => How could you <span class="highlight">put</span> the components or rules of ${m1} <span class="highlight">to another use</span> mid-game?,
-            "Eliminate": (m1, m2) => What happens if you completely <span class="highlight">eliminate</span> a standard rule or requirement from ${m1}?,
-            "Reverse": (m1, m2) => How could you <span class="highlight">reverse</span> the turn order or victory conditions associated with ${m1}?
-        };
+    "Substitute": (m1, m2) => m1 === m2 
+        ? `How could you <span class="highlight">substitute</span> a core element or material within the ${m1} mechanic?` 
+        : `How could you <span class="highlight">substitute</span> a core element or material within the ${m1} or ${m2} mechanics?`,
+    "Combine": (m1, m2) => `How could you <span class="highlight">combine</span> the ${m1} mechanic with components from an entirely different genre?`,
+    "Adapt": (m1, m2) => `How could you <span class="highlight">adapt</span> a mechanism from a classic parlor game into ${m1}?`,
+    "Modify": (m1, m2) => `How could you <span class="highlight">modify</span>, magnify, or minify the scale of components used in ${m1}?`,
+    "Put to another use": (m1, m2) => `How could you <span class="highlight">put</span> the components or rules of ${m1} <span class="highlight">to another use</span> mid-game?`,
+    "Eliminate": (m1, m2) => `What happens if you completely <span class="highlight">eliminate</span> a standard rule or requirement from ${m1}?`,
+    "Reverse": (m1, m2) => `How could you <span class="highlight">reverse</span> the turn order or victory conditions associated with ${m1}?`
+};
         // VIBES_SET: themes that describe a tone or feeling rather than a subject.
         // These get phrased as "with a Cozy tone" instead of "about Cozy" in the prompt.
         const VIBES_SET = new Set([
@@ -942,10 +942,10 @@
         // Main spin function — picks new random items for every unlocked slot, then animates and renders them.
         // Locked cards carry over unchanged from the previous roll.
         async function startSpin() {
+            const btn = document.getElementById('spinBtn');
+            btn.disabled = true;
+            document.getElementById('promptBox').style.display = 'none';
             clampNumberInputs(); updateSpinAvailability();
-            if (document.getElementById('spinBtn').disabled) return;
-            const btn = document.getElementById('spinBtn'); btn.disabled = true; document.getElementById('promptBox').style.display = 'none';
-
             const newResults = { mechanics: [], themes: [], components: [] };
             sectionKeys.forEach(key => {
                 if (!enabledSections[key]) { lockedState[key] = []; return; }
