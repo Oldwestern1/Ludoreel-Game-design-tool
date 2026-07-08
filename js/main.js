@@ -30,7 +30,7 @@
             initStaticControls();
             initWallpaperSystem();
             initThemeToggle();
-            initPromptDrag();
+            initPromptNav();
             initSoundToggle();
             updateSpinAvailability();
         });

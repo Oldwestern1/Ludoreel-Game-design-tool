@@ -64,64 +64,23 @@
             document.getElementById('historyNextBtn').disabled = historyIndex >= promptHistory.length - 1;
         }
 
-        // Lets the prompt card itself be dragged left/right (mouse or touch) to move through history,
-        // in addition to the ‹ › buttons and arrow keys. A drag past the threshold in either direction
-        // triggers navigation; anything shorter snaps back to center.
-        function initPromptDrag() {
+        // Click-to-navigate: clicking the left half of the card goes to the previous prompt, the right
+        // half goes to the next. Each click nudges the card toward the clicked side, briefly dips and
+        // shrinks (as if tucking under the card behind it), then the neighboring prompt rises back up
+        // into place — the same motion mirrored for either side. Arrow keys do the same thing.
+        function initPromptNav() {
             const box = document.getElementById('promptBox');
             if (!box) return;
-            let startX = 0, dx = 0, dragging = false;
-            const threshold = 70;
 
-            box.addEventListener('pointerdown', e => {
+            box.addEventListener('click', e => {
                 if (e.target.closest('.copy-btn, .history-nav-btn')) return; // let those buttons work normally
-                dragging = true; startX = e.clientX; dx = 0;
-                box.classList.add('dragging');
-                try { box.setPointerCapture(e.pointerId); } catch (err) {}
+                const rect = box.getBoundingClientRect();
+                const clickedLeftHalf = (e.clientX - rect.left) < rect.width / 2;
+                nudgeAndReveal(clickedLeftHalf ? 'prev' : 'next', clickedLeftHalf ? -1 : 1);
             });
-            box.addEventListener('pointermove', e => {
-                if (!dragging) return;
-                dx = e.clientX - startX;
-                const clamped = Math.max(-220, Math.min(220, dx));
-                // Pure horizontal translation — no rotation. A slight fade as it moves further out
-                // reads as the card sliding away, rather than spinning off oddly.
-                box.style.transform = `translateX(${clamped}px)`;
-                box.style.opacity = String(1 - Math.min(Math.abs(clamped) / 400, 0.35));
-            });
-            function endDrag(e) {
-                if (!dragging) return;
-                dragging = false;
-                box.classList.remove('dragging');
 
-                const moved = Math.abs(dx);
-
-                // A near-stationary press+release is a click, not a drag — nudge toward whichever
-                // side of the card was clicked and reveal the neighboring prompt from underneath.
-                if (moved < 6) {
-                    const rect = box.getBoundingClientRect();
-                    const clickedLeftHalf = (startX - rect.left) < rect.width / 2;
-                    dx = 0;
-                    nudgeAndReveal(clickedLeftHalf ? 'prev' : 'next', clickedLeftHalf ? -1 : 1);
-                    return;
-                }
-
-                const wantsNext = dx <= -threshold;
-                const wantsPrev = dx >= threshold;
-                const canGoNext = historyIndex < promptHistory.length - 1;
-                const canGoPrev = historyIndex > 0;
-                dx = 0;
-
-                if (wantsNext && canGoNext) slideToNeighbor('next');
-                else if (wantsPrev && canGoPrev) slideToNeighbor('prev');
-                else { box.style.transform = 'translateX(0)'; box.style.opacity = '1'; }
-            }
-            box.addEventListener('pointerup', endDrag);
-            box.addEventListener('pointercancel', endDrag);
-            box.addEventListener('pointerleave', e => { if (dragging && e.buttons === 0) endDrag(); });
-
-            // Click-to-navigate: a small nudge toward the clicked side, a brief dip-and-shrink (as if
-            // the card is tucking under the one behind it), then the neighboring prompt rises back up
-            // into place. Mirrors the same motion for either side. `nudgeSign` is -1 for left, 1 for right.
+            // `nudgeSign` is -1 for left, 1 for right — controls which way the card nudges/dips,
+            // independent of `direction` (which history entry it navigates to).
             function nudgeAndReveal(direction, nudgeSign) {
                 const canGo = direction === 'prev' ? historyIndex > 0 : historyIndex < promptHistory.length - 1;
                 if (!canGo) {
@@ -154,41 +113,12 @@
                 }, 110);
             }
 
-            // Slides the current prompt fully off-screen in the given direction, swaps in the
-            // neighboring prompt from history once it's off, then slides that in from the opposite
-            // side — the "flipping through a stack of cards" motion, rather than a snap-back rotation.
-            function slideToNeighbor(direction) {
-                SoundFX.whoosh();
-                let swapped = false;
-                const outX = direction === 'next' ? -(box.offsetWidth + 40) : (box.offsetWidth + 40);
-                box.style.transform = `translateX(${outX}px)`;
-                box.style.opacity = '0';
-
-                function doSwap() {
-                    if (swapped) return;
-                    swapped = true;
-                    box.removeEventListener('transitionend', onTransEnd);
-                    if (direction === 'next') goToNextPrompt(); else goToPrevPrompt();
-                    // Jump the (now-updated) card to the opposite edge with no transition...
-                    box.style.transition = 'none';
-                    box.style.transform = `translateX(${-outX}px)`;
-                    box.style.opacity = '0';
-                    void box.offsetWidth; // force reflow so the jump itself doesn't animate
-                    box.style.transition = '';
-                    // ...then let it slide into place, as if the next card in the stack was already waiting there.
-                    requestAnimationFrame(() => { box.style.transform = 'translateX(0)'; box.style.opacity = '1'; });
-                }
-                function onTransEnd(e) { if (e.propertyName === 'transform') doSwap(); }
-                box.addEventListener('transitionend', onTransEnd);
-                setTimeout(doSwap, 260); // fallback in case transitionend doesn't fire (e.g. reduced-motion)
-            }
-
-            // Keyboard equivalent: focus the prompt card, then use the arrow keys.
+            // Keyboard equivalent: focus the prompt card, then use the arrow keys — same animation as a click.
             box.setAttribute('tabindex', '0');
-            box.setAttribute('aria-label', 'Generated prompt. Use left and right arrow keys to browse previous prompts.');
+            box.setAttribute('aria-label', 'Generated prompt. Click the left or right side, or use the arrow keys, to browse previous prompts.');
             box.addEventListener('keydown', e => {
-                if (e.key === 'ArrowLeft' && historyIndex > 0) { e.preventDefault(); slideToNeighbor('prev'); }
-                else if (e.key === 'ArrowRight' && historyIndex < promptHistory.length - 1) { e.preventDefault(); slideToNeighbor('next'); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); nudgeAndReveal('prev', -1); }
+                else if (e.key === 'ArrowRight') { e.preventDefault(); nudgeAndReveal('next', 1); }
             });
         }
 
