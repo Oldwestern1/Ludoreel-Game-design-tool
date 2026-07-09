@@ -53,7 +53,7 @@
      id="path1"
      inkscape:path-effect="#path-effect2"
      inkscape:original-d="M 3,9 H 8 L 15,3 V 21 L 8,15 H 3 Z"
-     style="stroke:#000000;stroke-opacity:1;fill:none;stroke-width:2;stroke-dasharray:none" />
+     style="stroke:currentColor;stroke-opacity:1;fill:none;stroke-width:2;stroke-dasharray:none" />
   <rect
      x="19.150991"
      y="-7.3646507"
