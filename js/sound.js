@@ -127,9 +127,9 @@
             // The copy-chime source file is mastered very hot (peaks at 0dB) compared to the other
             // samples, so it needs a much lower gain to land at a comparable perceived loudness.
             copy()       { playSample('audio/copy-chime.mp3', { gain: 0.1 }); },
-            addItem()    { playTone({ freq: 600, duration: 0.1, type: 'sine', gain: 0.18, glideTo: 900 }); },
-            removeItem() { playTone({ freq: 680, duration: 0.1, type: 'sine', gain: 0.16, glideTo: 320 }); },
-            whoosh()     { playSample('audio/whoosh.mp3', { gain: 0.7 }); },
+            addItem()    { playTone({ freq: 600, duration: 0.1, type: 'sine', gain: 0.28, glideTo: 900 }); },
+            removeItem() { playTone({ freq: 680, duration: 0.1, type: 'sine', gain: 0.26, glideTo: 320 }); },
+            whoosh()     { playSample('audio/whoosh.mp3', { gain: 1.7 }); },
             // A low body tone plus a very short higher-pitched attack layered on top — pure low
             // tones read as quiet-to-inaudible on small/laptop speakers even at high gain, so the
             // attack layer gives it presence and punch regardless of speaker (same fix originally
