@@ -140,7 +140,7 @@
             // tones read as quiet-to-inaudible on small/laptop speakers even at high gain, so the
             // attack layer gives it presence and punch regardless of speaker (same fix originally
             // used for the old synthesized landing thud).
-            error()      { playSample('audio/error.mp3', { gain: 0.75 }); },
+            error()      { playSample('audio/error.mp3', { gain: 0.35 }); },
             bump()       { SoundFX.error(); },
             // Section toggle switches — same button-press sample as add/remove item, same
             // higher/lower playbackRate convention for on vs. off.
