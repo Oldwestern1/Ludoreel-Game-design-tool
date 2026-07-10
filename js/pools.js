@@ -9,7 +9,8 @@
             const isChecked = document.getElementById(`toggle-${key}`).checked;
             enabledSections[key] = isChecked;
             const row = document.getElementById(`row-${key}`);
-            if (isChecked) row.classList.add('active'); else row.classList.remove('active');
+            if (isChecked) { row.classList.add('active'); SoundFX.sectionOn(); }
+            else { row.classList.remove('active'); SoundFX.sectionOff(); }
             updateSpinAvailability();
             saveState();
         }
@@ -133,6 +134,7 @@
             const isDuplicate = masterData[key][category].some(n => n.toLowerCase() === name.toLowerCase());
             if (isDuplicate) {
                 if (inputEl) { inputEl.setCustomValidity(`"${name}" is already in this list.`); inputEl.reportValidity(); }
+                SoundFX.error();
                 return;
             }
             masterData[key][category].push(name);
@@ -159,6 +161,7 @@
             if (!confirm('Reset all pools to their original built-in lists? This removes any items you added and restores any you deleted.')) return;
             masterData = JSON.parse(JSON.stringify(DEFAULT_MASTER_DATA));
             uncheckedItems = { mechanics: new Set(), themes: new Set(), components: new Set() };
+            SoundFX.resetPools();
             rebuildPoolPickers();
             saveState();
         }
@@ -177,6 +180,7 @@
             const scope = getCategoryContentEl(key, category);
             if (!scope) return;
             scope.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = checked; });
+            if (checked) SoundFX.addItem(); else SoundFX.removeItem();
             updateCategoryCheckState(key, category); updatePoolMeta(key); updateSpinAvailability();
         }
 

@@ -10,6 +10,7 @@
                 const willBeLight = !document.body.classList.contains('light-mode');
                 document.body.classList.toggle('light-mode', willBeLight);
                 applyMode(willBeLight);
+                SoundFX.themeSwitch();
             });
         }
 
@@ -418,6 +419,7 @@
                     ringCircle.style.strokeDashoffset = 0;
                     wallpaperStyleIndex = 0; // index 0 is the "Off" style
                     window.refreshWallpaper();
+                    SoundFX.sectionOff(); // reuse the "turned off" tone — this is an off action too
                     btn.classList.add('long-pressing');
                     setTimeout(() => btn.classList.remove('long-pressing'), 300);
                     endPress();
@@ -452,6 +454,7 @@
                 if (didLongPress) { didLongPress = false; return; } // ignore click that ended a long press
                 wallpaperStyleIndex = (wallpaperStyleIndex + 1) % WALLPAPER_STYLES.length;
                 window.refreshWallpaper();
+                SoundFX.wallpaperCycle();
             });
 
             // Apply the wallpaper on first load

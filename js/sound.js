@@ -7,12 +7,15 @@
         // A mix of short synthesized tones (Web Audio oscillators) and real recorded samples.
         // Samples are used wherever a physical, textured sound reads better than a synthesized
         // blip — the tick (audio/tick.wav), the landing thud (audio/land-thud.mp3), the lock
-        // click (audio/lock-click.mp3), the prompt-card whoosh (audio/whoosh.mp3), and the copy
-        // confirmation chime (audio/copy-chime.mp3). Everything else (dice tick, add/remove item,
-        // bump) stays a synthesized tone — they're minor, frequent micro-interactions where a
-        // quick pitched blip is enough. The AudioContext is created lazily on first use, since
-        // browsers block audio until a user gesture anyway. Sound defaults on; the toggle in the
-        // top-right corner mutes it and that preference is persisted like everything else.
+        // click (audio/lock-click.mp3), the prompt-card whoosh (audio/whoosh.mp3), the copy
+        // confirmation chime (audio/copy-chime.mp3), a generic button press (audio/button-press.mp3)
+        // used for add/remove item, the section toggles, the theme switch, and wallpaper cycling,
+        // and an error sound (audio/error.mp3) used for the end-of-history bump and any other
+        // "that action isn't valid" feedback (e.g. trying to add a duplicate pool item). Only dice
+        // tick remains a synthesized tone — it's a minor, frequent micro-interaction where a quick
+        // pitched blip is enough. The AudioContext is created lazily on first use, since browsers
+        // block audio until a user gesture anyway. Sound defaults on; the toggle in the top-right
+        // corner mutes it and that preference is persisted like everything else.
         let audioCtx = null;
         let soundEnabled = true;
 
@@ -126,18 +129,34 @@
             lockOff()    { playSample('audio/lock-click.mp3', { gain: 0.65, playbackRate: 0.85 }); },
             // The copy-chime source file is mastered very hot (peaks at 0dB) compared to the other
             // samples, so it needs a much lower gain to land at a comparable perceived loudness.
-            copy()       { playSample('audio/copy-chime.mp3', { gain: 0.05 }); },
-            addItem()    { playTone({ freq: 600, duration: 0.1, type: 'sine', gain: 0.28, glideTo: 900 }); },
-            removeItem() { playTone({ freq: 680, duration: 0.1, type: 'sine', gain: 0.26, glideTo: 320 }); },
-            whoosh()     { playSample('audio/whoosh.mp3', { gain: 1.7 }); },
+            copy()       { playSample('audio/copy-chime.mp3', { gain: 0.18 }); },
+            // Add/remove custom pool items and the whole-category select-all checkbox — a real
+            // button press, played at a slightly higher rate for the "positive" action (add/select)
+            // and a slightly lower rate for the "negative" one (remove/deselect), same trick as lockOn/lockOff.
+            addItem()    { playSample('audio/button-press.mp3', { gain: 0.8, playbackRate: 1.1 }); },
+            removeItem() { playSample('audio/button-press.mp3', { gain: 0.7, playbackRate: 0.85 }); },
+            whoosh()     { playSample('audio/whoosh.mp3', { gain: 0.7 }); },
             // A low body tone plus a very short higher-pitched attack layered on top — pure low
             // tones read as quiet-to-inaudible on small/laptop speakers even at high gain, so the
             // attack layer gives it presence and punch regardless of speaker (same fix originally
             // used for the old synthesized landing thud).
-            bump() {
-                playTone({ freq: 150, duration: 0.09, type: 'sine', gain: 0.22 });
-                playTone({ freq: 520, duration: 0.03, type: 'triangle', gain: 0.13 });
+            error()      { playSample('audio/error.mp3', { gain: 0.75 }); },
+            bump()       { SoundFX.error(); },
+            // Section toggle switches — same button-press sample as add/remove item, same
+            // higher/lower playbackRate convention for on vs. off.
+            sectionOn()  { playSample('audio/button-press.mp3', { gain: 0.8, playbackRate: 1.1 }); },
+            sectionOff() { playSample('audio/button-press.mp3', { gain: 0.7, playbackRate: 0.85 }); },
+            // "Reset pools to defaults" is the one genuinely destructive action in the app (it's
+            // gated behind a confirm() already) — a deliberate two-tone descending cue, distinct
+            // from copy()'s ascending chime, so it reads as "done, and note this happened" rather
+            // than a routine success blip.
+            resetPools() {
+                playTone({ freq: 760, duration: 0.09, type: 'sine', gain: 0.15 });
+                playTone({ freq: 380, duration: 0.14, type: 'sine', gain: 0.15, delay: 0.09 });
             },
+            // Light/dark mode switch and wallpaper cycling — both plain UI clicks, same button-press sample.
+            themeSwitch() { playSample('audio/button-press.mp3', { gain: 0.75 }); },
+            wallpaperCycle() { playSample('audio/button-press.mp3', { gain: 0.65 }); },
         };
 
         // Wires up the top-right sound toggle: restores the persisted preference, updates its
