@@ -264,13 +264,317 @@
         ]);
 
         // ─── RESULT-CARD LINKS ──────────────────────────────────────────────────────
+        // THEME_LINKS: hand-picked Wikipedia article for each theme where a direct link is
+        // confidently correct — not auto-generated. Two deliberate design choices:
+        //
+        // 1. Plural theme names are curated to their SINGULAR Wikipedia article directly
+        //    ("Wolves" -> Wolf, "Bears" -> Bear, "Angels" -> Angel) rather than linked by name.
+        //    This is what fixes the "Cars" / "Aliens" problem at the root: those two are left
+        //    OUT of this list entirely because their exact plural title's Wikipedia primary topic
+        //    is the film franchise, not the general concept, and there's no single-word target to
+        //    redirect to instead (unlike "Wolves", there's no clean singular escape hatch for a
+        //    title that IS the plural). Rather than link to the wrong page, they get no link.
+        //
+        // 2. About a dozen other themes are also deliberately left OUT — either too vague/compound
+        //    to have one dedicated article ("Border Towns", "Frozen Lands", "Underground
+        //    Kingdoms"), or genuinely ambiguous even for a human to pick one confident target
+        //    ("Racing" — cars? horses? athletics? — "Rangers", "Court Intrigue"). These fall
+        //    through to no link (see getLinkFor) rather than a guessed/generic search.
+        //
+        // This is a first pass, not exhaustive — any theme not listed here just renders with no
+        // link, the same as a custom item. Add more entries any time a specific one is wanted.
+        const THEME_LINKS = {
+            "Age of Exploration": "https://en.wikipedia.org/wiki/Age_of_Discovery",
+            "Airships": "https://en.wikipedia.org/wiki/Airship",
+            "Alchemists": "https://en.wikipedia.org/wiki/Alchemy",
+            "Alternate History": "https://en.wikipedia.org/wiki/Alternate_history",
+            "Ancient Egypt": "https://en.wikipedia.org/wiki/Ancient_Egypt",
+            "Ancient Greece": "https://en.wikipedia.org/wiki/Ancient_Greece",
+            "Ancient Scrolls": "https://en.wikipedia.org/wiki/Scroll",
+            "Angels": "https://en.wikipedia.org/wiki/Angel",
+            "Ants": "https://en.wikipedia.org/wiki/Ant",
+            "Archaeologists": "https://en.wikipedia.org/wiki/Archaeology",
+            "Artifacts": "https://en.wikipedia.org/wiki/Artifact_(archaeology)",
+            "Artists": "https://en.wikipedia.org/wiki/Artist",
+            "Assassins": "https://en.wikipedia.org/wiki/Assassination",
+            "Asteroids": "https://en.wikipedia.org/wiki/Asteroid",
+            "Astronauts": "https://en.wikipedia.org/wiki/Astronaut",
+            "Bakeries": "https://en.wikipedia.org/wiki/Bakery",
+            "Bandits": "https://en.wikipedia.org/wiki/Bandit",
+            "Banshees": "https://en.wikipedia.org/wiki/Banshee",
+            "Bards": "https://en.wikipedia.org/wiki/Bard",
+            "Baristas": "https://en.wikipedia.org/wiki/Barista",
+            "Baseball": "https://en.wikipedia.org/wiki/Baseball",
+            "Basketball": "https://en.wikipedia.org/wiki/Basketball",
+            "Bears": "https://en.wikipedia.org/wiki/Bear",
+            "Beekeepers": "https://en.wikipedia.org/wiki/Beekeeping",
+            "Bees": "https://en.wikipedia.org/wiki/Bee",
+            "Bicycles": "https://en.wikipedia.org/wiki/Bicycle",
+            "Birds": "https://en.wikipedia.org/wiki/Bird",
+            "Birthdays": "https://en.wikipedia.org/wiki/Birthday",
+            "Black Holes": "https://en.wikipedia.org/wiki/Black_hole",
+            "Blacksmiths": "https://en.wikipedia.org/wiki/Blacksmith",
+            "Blueprints": "https://en.wikipedia.org/wiki/Blueprint",
+            "Books": "https://en.wikipedia.org/wiki/Book",
+            "Bounty Hunters": "https://en.wikipedia.org/wiki/Bounty_hunter",
+            "Boxing": "https://en.wikipedia.org/wiki/Boxing",
+            "Breweries": "https://en.wikipedia.org/wiki/Brewery",
+            "Brewers": "https://en.wikipedia.org/wiki/Brewing",
+            "Bronze Age": "https://en.wikipedia.org/wiki/Bronze_Age",
+            "Buses": "https://en.wikipedia.org/wiki/Bus",
+            "Buskers": "https://en.wikipedia.org/wiki/Busking",
+            "Candles": "https://en.wikipedia.org/wiki/Candle",
+            "Caravans": "https://en.wikipedia.org/wiki/Caravan_(travellers)",
+            "Carnival": "https://en.wikipedia.org/wiki/Carnival",
+            "Carnivals": "https://en.wikipedia.org/wiki/Carnival",
+            "Cartographers": "https://en.wikipedia.org/wiki/Cartography",
+            "Castles": "https://en.wikipedia.org/wiki/Castle",
+            "Catacombs": "https://en.wikipedia.org/wiki/Catacombs",
+            "Cats": "https://en.wikipedia.org/wiki/Cat",
+            "Centaurs": "https://en.wikipedia.org/wiki/Centaur",
+            "Chefs": "https://en.wikipedia.org/wiki/Chef",
+            "Christmas": "https://en.wikipedia.org/wiki/Christmas",
+            "Clocks": "https://en.wikipedia.org/wiki/Clock",
+            "Clockwork": "https://en.wikipedia.org/wiki/Clockwork",
+            "Clones": "https://en.wikipedia.org/wiki/Cloning",
+            "Coins": "https://en.wikipedia.org/wiki/Coin",
+            "Cold War Era": "https://en.wikipedia.org/wiki/Cold_War",
+            "Colonists": "https://en.wikipedia.org/wiki/Colonization",
+            "Comets": "https://en.wikipedia.org/wiki/Comet",
+            "Cons": "https://en.wikipedia.org/wiki/Confidence_trick",
+            "Construction Workers": "https://en.wikipedia.org/wiki/Construction_worker",
+            "Coral Reefs": "https://en.wikipedia.org/wiki/Coral_reef",
+            "Cowboys": "https://en.wikipedia.org/wiki/Cowboy",
+            "Criminals": "https://en.wikipedia.org/wiki/Crime",
+            "Crowns": "https://en.wikipedia.org/wiki/Crown_(headgear)",
+            "Cultists": "https://en.wikipedia.org/wiki/Cult",
+            "Cyberpunk": "https://en.wikipedia.org/wiki/Cyberpunk",
+            "DJs": "https://en.wikipedia.org/wiki/Disc_jockey",
+            "Dancers": "https://en.wikipedia.org/wiki/Dance",
+            "Deep Sea": "https://en.wikipedia.org/wiki/Deep_sea",
+            "Demolition Derbies": "https://en.wikipedia.org/wiki/Demolition_derby",
+            "Demons": "https://en.wikipedia.org/wiki/Demon",
+            "Deserts": "https://en.wikipedia.org/wiki/Desert",
+            "Detectives": "https://en.wikipedia.org/wiki/Detective",
+            "Dinosaurs": "https://en.wikipedia.org/wiki/Dinosaur",
+            "Diplomats": "https://en.wikipedia.org/wiki/Diplomacy",
+            "Divers": "https://en.wikipedia.org/wiki/Underwater_diving",
+            "Doctors": "https://en.wikipedia.org/wiki/Physician",
+            "Dogs": "https://en.wikipedia.org/wiki/Dog",
+            "Dolls": "https://en.wikipedia.org/wiki/Doll",
+            "Dragons": "https://en.wikipedia.org/wiki/Dragon",
+            "Drought": "https://en.wikipedia.org/wiki/Drought",
+            "Dungeons": "https://en.wikipedia.org/wiki/Dungeon",
+            "Dwarves": "https://en.wikipedia.org/wiki/Dwarf_(mythology)",
+            "Dystopian": "https://en.wikipedia.org/wiki/Dystopia",
+            "Easter": "https://en.wikipedia.org/wiki/Easter",
+            "Edo Period": "https://en.wikipedia.org/wiki/Edo_period",
+            "Egyptian Mythology": "https://en.wikipedia.org/wiki/Egyptian_mythology",
+            "Eldritch": "https://en.wikipedia.org/wiki/Eldritch",
+            "Elections": "https://en.wikipedia.org/wiki/Election",
+            "Elves": "https://en.wikipedia.org/wiki/Elf",
+            "Engineers": "https://en.wikipedia.org/wiki/Engineer",
+            "Explorers": "https://en.wikipedia.org/wiki/Exploration",
+            "Factories": "https://en.wikipedia.org/wiki/Factory",
+            "Fairies": "https://en.wikipedia.org/wiki/Fairy",
+            "Falconers": "https://en.wikipedia.org/wiki/Falconry",
+            "Famine": "https://en.wikipedia.org/wiki/Famine",
+            "Farmers": "https://en.wikipedia.org/wiki/Farmer",
+            "Farmers Markets": "https://en.wikipedia.org/wiki/Farmers'_market",
+            "First Contact": "https://en.wikipedia.org/wiki/First_contact_(science_fiction)",
+            "Floating Islands": "https://en.wikipedia.org/wiki/Floating_island_(fiction)",
+            "Folklore": "https://en.wikipedia.org/wiki/Folklore",
+            "Food Truck Owners": "https://en.wikipedia.org/wiki/Food_truck",
+            "Football": "https://en.wikipedia.org/wiki/American_football",
+            "Foxes": "https://en.wikipedia.org/wiki/Fox",
+            "Funerals": "https://en.wikipedia.org/wiki/Funeral",
+            "Gangsters": "https://en.wikipedia.org/wiki/Gangster",
+            "Gears": "https://en.wikipedia.org/wiki/Gear",
+            "Generation Ships": "https://en.wikipedia.org/wiki/Generation_ship",
+            "Ghosts": "https://en.wikipedia.org/wiki/Ghost",
+            "Giants": "https://en.wikipedia.org/wiki/Giant_(mythology)",
+            "Gilded Age": "https://en.wikipedia.org/wiki/Gilded_Age",
+            "Glaciers": "https://en.wikipedia.org/wiki/Glacier",
+            "Gladiators": "https://en.wikipedia.org/wiki/Gladiator",
+            "Gliders": "https://en.wikipedia.org/wiki/Glider_(sailplane)",
+            "Goblins": "https://en.wikipedia.org/wiki/Goblin",
+            "Golems": "https://en.wikipedia.org/wiki/Golem",
+            "Golf": "https://en.wikipedia.org/wiki/Golf",
+            "Greek Mythology": "https://en.wikipedia.org/wiki/Greek_mythology",
+            "Greenhouses": "https://en.wikipedia.org/wiki/Greenhouse",
+            "Griffins": "https://en.wikipedia.org/wiki/Griffin",
+            "Halloween": "https://en.wikipedia.org/wiki/Halloween",
+            "Harvest Festival": "https://en.wikipedia.org/wiki/Harvest_festival",
+            "Haunted Houses": "https://en.wikipedia.org/wiki/Haunted_house",
+            "Helicopters": "https://en.wikipedia.org/wiki/Helicopter",
+            "Hermits": "https://en.wikipedia.org/wiki/Hermit",
+            "Hockey": "https://en.wikipedia.org/wiki/Ice_hockey",
+            "Horses": "https://en.wikipedia.org/wiki/Horse",
+            "Hospitals": "https://en.wikipedia.org/wiki/Hospital",
+            "Hot Air Balloons": "https://en.wikipedia.org/wiki/Hot_air_balloon",
+            "Hovercrafts": "https://en.wikipedia.org/wiki/Hovercraft",
+            "Industrial Revolution": "https://en.wikipedia.org/wiki/Industrial_Revolution",
+            "Insects": "https://en.wikipedia.org/wiki/Insect",
+            "Inventors": "https://en.wikipedia.org/wiki/Inventor",
+            "Iron Age": "https://en.wikipedia.org/wiki/Iron_Age",
+            "Jungles": "https://en.wikipedia.org/wiki/Jungle",
+            "Kaiju": "https://en.wikipedia.org/wiki/Kaiju",
+            "Keys": "https://en.wikipedia.org/wiki/Key_(lock)",
+            "Knights": "https://en.wikipedia.org/wiki/Knight",
+            "Krakens": "https://en.wikipedia.org/wiki/Kraken",
+            "Lanterns": "https://en.wikipedia.org/wiki/Lantern",
+            "Lawyers": "https://en.wikipedia.org/wiki/Lawyer",
+            "Librarians": "https://en.wikipedia.org/wiki/Librarian",
+            "Libraries": "https://en.wikipedia.org/wiki/Library",
+            "Lighthouses": "https://en.wikipedia.org/wiki/Lighthouse",
+            "Lost Cities": "https://en.wikipedia.org/wiki/Lost_city",
+            "Lumberjacks": "https://en.wikipedia.org/wiki/Lumberjack",
+            "Lunar New Year": "https://en.wikipedia.org/wiki/Lunar_New_Year",
+            "Maps": "https://en.wikipedia.org/wiki/Map",
+            "Marionettes": "https://en.wikipedia.org/wiki/Marionette",
+            "Marketplaces": "https://en.wikipedia.org/wiki/Market_(place)",
+            "Masks": "https://en.wikipedia.org/wiki/Mask",
+            "Masquerade Balls": "https://en.wikipedia.org/wiki/Masquerade_ball",
+            "Mechs": "https://en.wikipedia.org/wiki/Mecha",
+            "Medieval Era": "https://en.wikipedia.org/wiki/Middle_Ages",
+            "Mediums": "https://en.wikipedia.org/wiki/Medium_(spirituality)",
+            "Mercenaries": "https://en.wikipedia.org/wiki/Mercenary",
+            "Merchants": "https://en.wikipedia.org/wiki/Merchant",
+            "Merfolk": "https://en.wikipedia.org/wiki/Merfolk",
+            "Miners": "https://en.wikipedia.org/wiki/Mining",
+            "Mirrors": "https://en.wikipedia.org/wiki/Mirror",
+            "Mob Bosses": "https://en.wikipedia.org/wiki/Crime_boss",
+            "Monks": "https://en.wikipedia.org/wiki/Monk",
+            "Monster Trucks": "https://en.wikipedia.org/wiki/Monster_truck",
+            "Mosaics": "https://en.wikipedia.org/wiki/Mosaic",
+            "Motorcycles": "https://en.wikipedia.org/wiki/Motorcycle",
+            "Mummies": "https://en.wikipedia.org/wiki/Mummy",
+            "Museums": "https://en.wikipedia.org/wiki/Museum",
+            "Music Boxes": "https://en.wikipedia.org/wiki/Music_box",
+            "Musicians": "https://en.wikipedia.org/wiki/Musician",
+            "Natural Disasters": "https://en.wikipedia.org/wiki/Natural_disaster",
+            "Nebulas": "https://en.wikipedia.org/wiki/Nebula",
+            "Necromancers": "https://en.wikipedia.org/wiki/Necromancy",
+            "New Year's Eve": "https://en.wikipedia.org/wiki/New_Year's_Eve",
+            "Norse Mythology": "https://en.wikipedia.org/wiki/Norse_mythology",
+            "Nuns": "https://en.wikipedia.org/wiki/Nun",
+            "Opera Singers": "https://en.wikipedia.org/wiki/Opera",
+            "Oracles": "https://en.wikipedia.org/wiki/Oracle",
+            "Orchestras": "https://en.wikipedia.org/wiki/Orchestra",
+            "Orcs": "https://en.wikipedia.org/wiki/Orc",
+            "Owls": "https://en.wikipedia.org/wiki/Owl",
+            "Paintings": "https://en.wikipedia.org/wiki/Painting",
+            "Phoenixes": "https://en.wikipedia.org/wiki/Phoenix_(mythology)",
+            "Pirates": "https://en.wikipedia.org/wiki/Piracy",
+            "Plague": "https://en.wikipedia.org/wiki/Plague_(disease)",
+            "Planes": "https://en.wikipedia.org/wiki/Airplane",
+            "Post Apocalypse": "https://en.wikipedia.org/wiki/Apocalyptic_and_post-apocalyptic_fiction",
+            "Postal Workers": "https://en.wikipedia.org/wiki/Mail_carrier",
+            "Potions": "https://en.wikipedia.org/wiki/Potion",
+            "Pottery": "https://en.wikipedia.org/wiki/Pottery",
+            "Prison Breaks": "https://en.wikipedia.org/wiki/Prison_escape",
+            "Prisons": "https://en.wikipedia.org/wiki/Prison",
+            "Programmers": "https://en.wikipedia.org/wiki/Programmer",
+            "Puppets": "https://en.wikipedia.org/wiki/Puppet",
+            "Quarantine": "https://en.wikipedia.org/wiki/Quarantine",
+            "Quilts": "https://en.wikipedia.org/wiki/Quilt",
+            "Realtors": "https://en.wikipedia.org/wiki/Real_estate_broker",
+            "Rebellions": "https://en.wikipedia.org/wiki/Rebellion",
+            "Renaissance": "https://en.wikipedia.org/wiki/Renaissance",
+            "Restaurants": "https://en.wikipedia.org/wiki/Restaurant",
+            "Revolution": "https://en.wikipedia.org/wiki/Revolution",
+            "Rickshaws": "https://en.wikipedia.org/wiki/Rickshaw",
+            "Roaring Twenties": "https://en.wikipedia.org/wiki/Roaring_Twenties",
+            "Robots": "https://en.wikipedia.org/wiki/Robot",
+            "Roman Empire": "https://en.wikipedia.org/wiki/Roman_Empire",
+            "Royalty": "https://en.wikipedia.org/wiki/Monarchy",
+            "Samurai": "https://en.wikipedia.org/wiki/Samurai",
+            "Scavengers": "https://en.wikipedia.org/wiki/Scavenger",
+            "Schools": "https://en.wikipedia.org/wiki/School",
+            "Scientists": "https://en.wikipedia.org/wiki/Scientist",
+            "Scrapbooks": "https://en.wikipedia.org/wiki/Scrapbooking",
+            "Sea Monsters": "https://en.wikipedia.org/wiki/Sea_monster",
+            "Senates": "https://en.wikipedia.org/wiki/Senate",
+            "Shapeshifters": "https://en.wikipedia.org/wiki/Shapeshifting",
+            "Sharks": "https://en.wikipedia.org/wiki/Shark",
+            "Shields": "https://en.wikipedia.org/wiki/Shield",
+            "Shipwrecks": "https://en.wikipedia.org/wiki/Shipwreck",
+            "Sirens": "https://en.wikipedia.org/wiki/Siren_(mythology)",
+            "Skeletons": "https://en.wikipedia.org/wiki/Skeleton_(undead)",
+            "Sleds": "https://en.wikipedia.org/wiki/Sled",
+            "Smugglers": "https://en.wikipedia.org/wiki/Smuggling",
+            "Soccer": "https://en.wikipedia.org/wiki/Association_football",
+            "Solarpunk": "https://en.wikipedia.org/wiki/Solarpunk",
+            "Space Race": "https://en.wikipedia.org/wiki/Space_Race",
+            "Space Stations": "https://en.wikipedia.org/wiki/Space_station",
+            "Spaceships": "https://en.wikipedia.org/wiki/Spacecraft",
+            "Spies": "https://en.wikipedia.org/wiki/Espionage",
+            "Stained Glass": "https://en.wikipedia.org/wiki/Stained_glass",
+            "Statues": "https://en.wikipedia.org/wiki/Statue",
+            "Steampunk": "https://en.wikipedia.org/wiki/Steampunk",
+            "Stone Age": "https://en.wikipedia.org/wiki/Stone_Age",
+            "Street Food": "https://en.wikipedia.org/wiki/Street_food",
+            "Submarines": "https://en.wikipedia.org/wiki/Submarine",
+            "Swamps": "https://en.wikipedia.org/wiki/Swamp",
+            "Swords": "https://en.wikipedia.org/wiki/Sword",
+            "Tailors": "https://en.wikipedia.org/wiki/Tailor",
+            "Tanks": "https://en.wikipedia.org/wiki/Tank",
+            "Tarot Cards": "https://en.wikipedia.org/wiki/Tarot",
+            "Tea Houses": "https://en.wikipedia.org/wiki/Teahouse",
+            "Teachers": "https://en.wikipedia.org/wiki/Teacher",
+            "Tennis": "https://en.wikipedia.org/wiki/Tennis",
+            "Thanksgiving": "https://en.wikipedia.org/wiki/Thanksgiving",
+            "The Olympics": "https://en.wikipedia.org/wiki/Olympic_Games",
+            "Theme Parks": "https://en.wikipedia.org/wiki/Amusement_park",
+            "Time Travel": "https://en.wikipedia.org/wiki/Time_travel",
+            "Tournaments": "https://en.wikipedia.org/wiki/Tournament",
+            "Toys": "https://en.wikipedia.org/wiki/Toy",
+            "Trains": "https://en.wikipedia.org/wiki/Train",
+            "Treasures": "https://en.wikipedia.org/wiki/Treasure",
+            "Trolls": "https://en.wikipedia.org/wiki/Troll",
+            "Trucks": "https://en.wikipedia.org/wiki/Truck",
+            "Unicorns": "https://en.wikipedia.org/wiki/Unicorn",
+            "Valentine's Day": "https://en.wikipedia.org/wiki/Valentine's_Day",
+            "Vampires": "https://en.wikipedia.org/wiki/Vampire",
+            "Victorian Era": "https://en.wikipedia.org/wiki/Victorian_era",
+            "Vikings": "https://en.wikipedia.org/wiki/Viking",
+            "Volcanoes": "https://en.wikipedia.org/wiki/Volcano",
+            "Weddings": "https://en.wikipedia.org/wiki/Wedding",
+            "Werewolves": "https://en.wikipedia.org/wiki/Werewolf",
+            "Whales": "https://en.wikipedia.org/wiki/Whale",
+            "Wild West": "https://en.wikipedia.org/wiki/American_frontier",
+            "Windmills": "https://en.wikipedia.org/wiki/Windmill",
+            "Wineries": "https://en.wikipedia.org/wiki/Winery",
+            "Witches": "https://en.wikipedia.org/wiki/Witchcraft",
+            "Wizards": "https://en.wikipedia.org/wiki/Wizard_(fantasy)",
+            "Wolves": "https://en.wikipedia.org/wiki/Wolf",
+            "Wormholes": "https://en.wikipedia.org/wiki/Wormhole",
+            "Zombies": "https://en.wikipedia.org/wiki/Zombie",
+        };
+
         // LINK_MAPS: per-category maps of hand-picked "learn more" URLs, keyed by item name.
-        // Only "mechanics" has one (MECHANIC_LINKS, above) — BGG's mechanic pages are a single,
-        // reliable, one-to-one source. Themes and components have no equivalent authoritative
-        // source, so those two are left empty and always fall through to the Wikipedia search
-        // fallback in getLinkFor() below. Add entries here any time you want a specific item to
-        // point somewhere better than the auto-generated guess.
-        const LINK_MAPS = { mechanics: MECHANIC_LINKS, themes: {}, components: {} };
+        // Components has no equivalent — components (physical bits like "a Sand Timer" or "18
+        // Cards") are too generic/mundane to be worth linking, and never get a link at all (see
+        // getLinkFor below). Mechanics and themes both use a curated, opt-in list rather than an
+        // auto-generated guess for every item — see the comments on MECHANIC_LINKS and THEME_LINKS
+        // above for why. Add entries to either any time you want a specific item to point somewhere.
+        // COMPONENT_LINKS: unlike mechanics and themes, most components are self-explanatory
+        // physical objects ("Paper", "a Bell", "Cups") that don't benefit from a link at all — so
+        // this list is intentionally tiny, covering only the handful that are either genuine
+        // hobby jargon (a newcomer may not know what a "Meeple" is) or have real history/context
+        // worth a click. "Tarot Cards" and "Ancient Scrolls" reuse the exact same target as their
+        // theme-list counterparts, since they're the same real-world subject either way.
+        const COMPONENT_LINKS = {
+            "Meeples": "https://en.wikipedia.org/wiki/Meeple",
+            "Polyhedral Dice": "https://en.wikipedia.org/wiki/Dice",
+            "Dominoes": "https://en.wikipedia.org/wiki/Dominoes",
+            "Wax Seals": "https://en.wikipedia.org/wiki/Wax_seal",
+            "Carved Runes": "https://en.wikipedia.org/wiki/Runes",
+            "Tarot Cards": "https://en.wikipedia.org/wiki/Tarot",
+            "Ancient Scrolls": "https://en.wikipedia.org/wiki/Scroll",
+        };
+
+        const LINK_MAPS = { mechanics: MECHANIC_LINKS, themes: THEME_LINKS, components: COMPONENT_LINKS };
 
         // Finds which named group inside a masterData category an item belongs to (e.g. "Word
         // Inspiration" inside themes) by searching the live masterData — including any custom items
@@ -295,18 +599,8 @@
             return out.trim() || name; // never search for an empty string
         }
 
-        // Builds a Wikipedia search-results URL (not an auto-jump to the top hit — see the comment
-        // on getLinkFor below for why). Used instead of guessing an article slug directly
-        // (e.g. `/wiki/${name}`), since plenty of item names don't exactly match a Wikipedia title
-        // (plurals, disambiguation, multi-word phrases) — a search is far more forgiving and never
-        // links to a dead page.
-        function wikipediaSearchLink(name) {
-            const query = normalizeForSearch(name);
-            return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}&title=Special:Search&fulltext=1`;
-        }
-
         // Builds a DuckDuckGo search scoped to BoardGameGeek's site, for mechanics with no curated
-        // MECHANIC_LINKS entry (see getLinkFor below). More useful than a Wikipedia search for a
+        // MECHANIC_LINKS entry (see getLinkFor below). More useful than a general search for a
         // game-design mechanic term — even mechanics with no official BGG mechanic *tag* (Engine
         // Building, Tableau Building, etc.) usually have plenty of real BGG forum/wiki discussion.
         function bggSearchLink(name) {
@@ -322,42 +616,47 @@
             return `https://www.merriam-webster.com/dictionary/${encodeURIComponent(name.trim().toLowerCase())}`;
         }
 
-        // Resolves the "learn more" link for a result card, if any:
-        //   1. A hand-picked URL in LINK_MAPS always wins when one exists (currently mechanics only).
-        //   2. Mechanics with no curated entry fall back to a BGG-scoped search (bggSearchLink) rather
-        //      than Wikipedia — a game-design mechanic term is much better served by BGG's own forum
-        //      and wiki content than a general-purpose encyclopedia.
+        // Resolves the "learn more" link for a result card, if any — returns null for "no link" rather
+        // than guessing. Not every item gets one:
+        //   1. A hand-picked URL in LINK_MAPS always wins when one exists (MECHANIC_LINKS or
+        //      THEME_LINKS, both above). This is the *only* source of links for mechanics and themes
+        //      outside the Word Inspiration group — there's no automatic fallback for the rest of
+        //      them, on purpose, since an auto-generated guess is exactly what caused "Cars" and
+        //      "Aliens" to link to the wrong Wikipedia page in the first place. An uncurated theme,
+        //      or a mechanic outside MECHANIC_LINKS's curated set (see #2), just renders with no link,
+        //      same as a custom item — better no link than a wrong or thin one.
+        //   2. The one exception: mechanics with no curated entry still fall back to a BGG-scoped
+        //      search (bggSearchLink) rather than getting nothing. Mechanic terminology is a much
+        //      narrower, more fixed vocabulary than theme words, so a BGG-scoped search reliably
+        //      surfaces relevant forum/wiki discussion even for terms with no official mechanic tag.
         //   3. Themes in the "Vibes" group (Cozy, Grim, ...) get no link — they're moods, not subjects.
-        //   4. Themes in the "Word Inspiration" group get a dictionary link instead of Wikipedia — UNLESS
-        //      the name is a SCAMPER prompt verb (Combine, Reverse, ...), which gets no link, since
-        //      "look up the dictionary definition of Combine" isn't useful the way it is for Redolent
-        //      or Sonder.
-        //   5. Everything else (themes outside Vibes/Word Inspiration, and all components) falls back
-        //      to a Wikipedia search. This is deliberately a search-results page, not an auto-jump to
-        //      Wikipedia's single best-guess article (no "go=Go") — plenty of theme words are plural
-        //      nouns that happen to exactly match a movie or franchise title rather than the general
-        //      concept ("Cars" the Pixar film outranks "Car" the vehicle, "Aliens" the 1986 film
-        //      outranks "Alien" the general concept), so auto-jumping risks silently landing on the
-        //      wrong page. A search page costs one extra click but is never confidently wrong.
+        //   4. Themes in the "Word Inspiration" group get a dictionary link — UNLESS the name is a
+        //      SCAMPER prompt verb (Combine, Reverse, ...), which gets no link, since "look up the
+        //      dictionary definition of Combine" isn't useful the way it is for Redolent or Sonder.
+        //   5. Components have no automatic fallback either — only the handful in COMPONENT_LINKS
+        //      (hobby jargon like "Meeples", or components with real history like "Wax Seals") get a
+        //      link at all; everything else ("Paper", "a Bell", "Cups") is self-explanatory and stays
+        //      unlinked, same as an uncurated theme.
         // Applies to every item including custom ones typed into the "Add an item…" box — group
         // membership is read live from masterData, so a custom word added to "Word Inspiration" gets
-        // a dictionary link automatically, without needing its own curated entry.
+        // a dictionary link automatically, without needing its own curated entry (though naturally
+        // it won't be in MECHANIC_LINKS/THEME_LINKS, since those are hand-picked for the built-ins).
         function getLinkFor(categoryKey, itemName) {
             const curated = LINK_MAPS[categoryKey] && LINK_MAPS[categoryKey][itemName];
-            if (curated) return { url: curated, source: 'BoardGameGeek' };
+            if (curated) return { url: curated, source: categoryKey === 'mechanics' ? 'BoardGameGeek' : 'Wikipedia' };
 
             if (categoryKey === 'mechanics') return { url: bggSearchLink(itemName), source: 'BoardGameGeek search' };
 
             if (categoryKey === 'themes') {
                 const group = getGroupFor('themes', itemName);
-                if (group === 'Vibes') return null;
                 if (group === 'Word Inspiration') {
                     const isScamperVerb = Object.keys(SCAMPER).some(k => k.toLowerCase() === itemName.toLowerCase());
                     if (isScamperVerb) return null;
                     return { url: dictionaryLink(itemName), source: 'Merriam-Webster' };
                 }
+                return null; // Vibes, or any theme (curated or not) outside Word Inspiration
             }
-            return { url: wikipediaSearchLink(itemName), source: 'Wikipedia' };
+            return null; // components
         }
 
         // masterData: the full pool of options for each category.
@@ -394,11 +693,11 @@
                 "Word Inspiration": ["Crux", "Redolent", "Interloper", "Deleterious", "Foible", "Saturnine", "Blandishment", "Ephemeral", "Labyrinthine", "Quixotic", "Halcyon", "Ineffable", "Mellifluous", "Sonder", "Substitute", "Combine", "Adapt", "Modify", "Put to another use", "Eliminate", "Reverse"]
             },
             components: {
-                "Cards & Dice": ["18 Cards", "10 Cards", "5 Cards", "a Deck of Cards", "a Single Card", "Two Decks of Cards", "Playing Cards", "Tarot Cards", "1 Die", "2 Dice", "5 Dice", "10 Dice", "Polyhedral Dice", "Custom Dice"],
-                "Tokens & Tracking": ["a Bag of Tokens", "10 Tokens", "1 Token", "Coins", "Gemstones", "Crystals", "Beads", "Marbles", "Stones", "a Timer", "a Sand Timer", "a Spinning Wheel", "a Clock", "a Dial", "a Track", "Acrylic Gems", "Wooden Discs", "Wooden Cubes", "Resin Tokens", "a Scorepad", "a Rotating Dial"],
-                "Stationery & Media": ["Paper", "a Pencil", "a Pen", "a Marker", "a Paint Brush", "a Stamp", "Stickers", "a Letter", "a Photograph", "a Newspaper", "a Blueprint", "Erasable Markers", "a Dry-Erase Board", "Ancient Scrolls", "Riddles", "Carved Runes"],
-                "Containers & Structural": ["Cups", "a Game Board", "a Shared Board", "Individual Boards", "a Hidden Envelope", "a Secret Note", "a Locked Box", "a Container", "a Screen", "a Blindfold", "a Pouch", "Wax Seals", "Stacking Pieces", "Folding Pieces", "Sliding Pieces", "Rotating Pieces", "Puzzle Pieces", "Building Pieces", "Miniatures", "Figures", "Meeples", "Wooden Pieces", "Plastic Pieces", "Metal Pieces", "Glass Pieces", "Transparent Pieces", "Transparent Overlays", "Tiles", "Hex Tiles", "Dominoes", "Interlocking Pieces", "a Pop-Up Tent Piece"],
-                "Utilities & Toys": ["String", "Rope", "Magnets", "Keys", "Locks", "Chains", "Rings", "Yarn", "a Bell", "a Whistle", "Feathers", "Shells", "a Magnifying Glass", "a Compass", "a Folding Map", "a Spyglass", "a Velcro Strip", "a Cloth Map", "an Easel", "a Kazoo", "a Buzzer", "a Hand Drum", "a Hat", "a Cape", "a Sash", "Wristbands", "a Mask", "a Flashlight", "Glow Sticks", "Glow-in-the-Dark Pieces", "a Toy Phone", "a Walkie-Talkie", "a Toy Remote Control", "a Launcher", "a Catapult", "a Cannon"],
+                "Cards & Dice": ["10 Cards", "a Deck of Cards", "a Single Card", "Two Decks of Cards", "Tarot Cards", "1 Die", "5 Dice", "Polyhedral Dice", "Custom Dice"],
+                "Tokens & Tracking": ["a Bag of Tokens", "1 Token", "Coins", "Gemstones", "Crystals", "Beads", "Marbles", "a Sand Timer", "a Spinning Wheel", "a Clock", "a Rotating Dial", "Acrylic Gems", "Wooden Discs", "Wooden Cubes", "Resin Tokens", "a Scorepad"],
+                "Stationery & Media": ["Paper", "a Pencil", "a Pen", "a Paint Brush", "a Stamp", "Stickers", "a Letter", "a Photograph", "a Newspaper", "a Blueprint", "Erasable Markers", "a Dry-Erase Board", "Ancient Scrolls", "Riddles", "Carved Runes"],
+                "Containers & Structural": ["Cups", "a Game Board", "a Shared Board", "Individual Boards", "a Hidden Envelope", "a Locked Box", "a Screen", "a Blindfold", "a Pouch", "Wax Seals", "Stacking Pieces", "Folding Pieces", "Sliding Pieces", "Rotating Pieces", "Puzzle Pieces", "Building Pieces", "Miniatures", "Meeples", "Wooden Pieces", "Glass Pieces", "Transparent Pieces", "Transparent Overlays", "Tiles", "Hex Tiles", "Dominoes", "Interlocking Pieces"],
+                "Utilities & Toys": ["String", "Rope", "Magnets", "Keys", "Locks", "Chains", "Rings", "Yarn", "a Bell", "a Whistle", "Feathers", "Shells", "a Magnifying Glass", "a Compass", "a Folding Map", "a Spyglass", "an Easel", "a Buzzer", "a Hat", "a Cape", "a Sash", "Wristbands", "a Mask", "a Flashlight", "Glow-in-the-Dark Pieces", "a Walkie-Talkie", "a Launcher"],
             }
         };
 
