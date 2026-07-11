@@ -326,7 +326,6 @@
             "Candles": "https://en.wikipedia.org/wiki/Candle",
             "Caravans": "https://en.wikipedia.org/wiki/Caravan_(travellers)",
             "Carnival": "https://en.wikipedia.org/wiki/Carnival",
-            "Carnivals": "https://en.wikipedia.org/wiki/Carnival",
             "Cartographers": "https://en.wikipedia.org/wiki/Cartography",
             "Castles": "https://en.wikipedia.org/wiki/Castle",
             "Catacombs": "https://en.wikipedia.org/wiki/Catacombs",
@@ -479,7 +478,6 @@
             "Quarantine": "https://en.wikipedia.org/wiki/Quarantine",
             "Quilts": "https://en.wikipedia.org/wiki/Quilt",
             "Realtors": "https://en.wikipedia.org/wiki/Real_estate_broker",
-            "Rebellions": "https://en.wikipedia.org/wiki/Rebellion",
             "Renaissance": "https://en.wikipedia.org/wiki/Renaissance",
             "Restaurants": "https://en.wikipedia.org/wiki/Restaurant",
             "Revolution": "https://en.wikipedia.org/wiki/Revolution",
@@ -589,6 +587,18 @@
             return null;
         }
 
+        // True if itemName is one of the original built-in items for this category (as opposed to
+        // something a person typed into "Add an item…"). Checked against DEFAULT_MASTER_DATA — a
+        // frozen snapshot taken before any customization — rather than the live masterData, so a
+        // custom item never counts as "default" even after it's been saved/reloaded. Used by
+        // getLinkFor below to keep every link (curated or fallback-search) scoped to default items
+        // only, exactly like MECHANIC_LINKS/THEME_LINKS/COMPONENT_LINKS already are.
+        function isDefaultItem(categoryKey, itemName) {
+            const groups = DEFAULT_MASTER_DATA[categoryKey];
+            if (!groups) return false;
+            return Object.keys(groups).some(groupName => groups[groupName].includes(itemName));
+        }
+
         // Strips a leading count/article word ("18 ", "a ", "Two ") from an item name before it's
         // used as a search query, so "18 Cards" and "a Deck of Cards" search for their actual
         // subject ("Cards" / "Deck of Cards") instead of being thrown at Wikipedia verbatim.
@@ -617,33 +627,29 @@
         }
 
         // Resolves the "learn more" link for a result card, if any — returns null for "no link" rather
-        // than guessing. Not every item gets one:
-        //   1. A hand-picked URL in LINK_MAPS always wins when one exists (MECHANIC_LINKS or
-        //      THEME_LINKS, both above). This is the *only* source of links for mechanics and themes
-        //      outside the Word Inspiration group — there's no automatic fallback for the rest of
-        //      them, on purpose, since an auto-generated guess is exactly what caused "Cars" and
-        //      "Aliens" to link to the wrong Wikipedia page in the first place. An uncurated theme,
-        //      or a mechanic outside MECHANIC_LINKS's curated set (see #2), just renders with no link,
-        //      same as a custom item — better no link than a wrong or thin one.
-        //   2. The one exception: mechanics with no curated entry still fall back to a BGG-scoped
-        //      search (bggSearchLink) rather than getting nothing. Mechanic terminology is a much
-        //      narrower, more fixed vocabulary than theme words, so a BGG-scoped search reliably
-        //      surfaces relevant forum/wiki discussion even for terms with no official mechanic tag.
-        //   3. Themes in the "Vibes" group (Cozy, Grim, ...) get no link — they're moods, not subjects.
-        //   4. Themes in the "Word Inspiration" group get a dictionary link — UNLESS the name is a
-        //      SCAMPER prompt verb (Combine, Reverse, ...), which gets no link, since "look up the
-        //      dictionary definition of Combine" isn't useful the way it is for Redolent or Sonder.
-        //   5. Components have no automatic fallback either — only the handful in COMPONENT_LINKS
-        //      (hobby jargon like "Meeples", or components with real history like "Wax Seals") get a
-        //      link at all; everything else ("Paper", "a Bell", "Cups") is self-explanatory and stays
-        //      unlinked, same as an uncurated theme.
-        // Applies to every item including custom ones typed into the "Add an item…" box — group
-        // membership is read live from masterData, so a custom word added to "Word Inspiration" gets
-        // a dictionary link automatically, without needing its own curated entry (though naturally
-        // it won't be in MECHANIC_LINKS/THEME_LINKS, since those are hand-picked for the built-ins).
+        // than guessing. This applies to default/built-in items only; anything typed into "Add an
+        // item…" always renders as plain text, full stop, no exceptions — see isDefaultItem above.
+        //   1. A hand-picked URL in LINK_MAPS always wins when one exists (MECHANIC_LINKS, THEME_LINKS,
+        //      or COMPONENT_LINKS, all above). This is the *only* source of links for themes and
+        //      components — there's no automatic fallback for either, on purpose, since an
+        //      auto-generated guess is exactly what caused "Cars" and "Aliens" to link to the wrong
+        //      Wikipedia page in the first place. An uncurated theme, a component outside
+        //      COMPONENT_LINKS, or any custom item just renders with no link — better no link than a
+        //      wrong or thin one.
+        //   2. The one exception: default mechanics with no curated entry still fall back to a
+        //      BGG-scoped search (bggSearchLink). Mechanic terminology is a much narrower, more fixed
+        //      vocabulary than theme words, so a BGG-scoped search reliably surfaces relevant
+        //      forum/wiki discussion even for terms with no official mechanic tag — but this still
+        //      only applies to the built-in mechanic list, not anything a person adds themselves.
+        //   3. Themes in the "Word Inspiration" group get a dictionary link, but again only for the
+        //      built-in words — UNLESS the name is a SCAMPER prompt verb (Combine, Reverse, ...),
+        //      which gets no link either way, since "look up the dictionary definition of Combine"
+        //      isn't useful the way it is for Redolent or Sonder.
         function getLinkFor(categoryKey, itemName) {
             const curated = LINK_MAPS[categoryKey] && LINK_MAPS[categoryKey][itemName];
             if (curated) return { url: curated, source: categoryKey === 'mechanics' ? 'BoardGameGeek' : 'Wikipedia' };
+
+            if (!isDefaultItem(categoryKey, itemName)) return null; // custom item — no link, ever
 
             if (categoryKey === 'mechanics') return { url: bggSearchLink(itemName), source: 'BoardGameGeek search' };
 
@@ -654,7 +660,7 @@
                     if (isScamperVerb) return null;
                     return { url: dictionaryLink(itemName), source: 'Merriam-Webster' };
                 }
-                return null; // Vibes, or any theme (curated or not) outside Word Inspiration
+                return null; // Vibes, or any default theme outside Word Inspiration
             }
             return null; // components
         }
@@ -682,15 +688,15 @@
                 "Horror": ["Vampires", "Werewolves", "Zombies", "Sea Monsters", "Haunted Houses", "Catacombs", "Plague", "Mediums", "Oracles", "Cultists", "Eldritch", "Ghosts"],
                 "Historical": ["Stone Age", "Ancient Egypt", "Ancient Greece", "Roman Empire", "Medieval Era", "Renaissance", "Gladiators", "Samurai", "Vikings", "Pirates", "Age of Exploration", "Wild West", "Cowboys", "Victorian Era", "Industrial Revolution", "Roaring Twenties", "Modern Day", "Alternate History", "Bronze Age", "Iron Age", "Edo Period", "Gilded Age", "Cold War Era", "Space Race"],
                 "Occupations": ["Chefs", "Librarians", "Explorers", "Divers", "Miners", "Farmers", "Doctors", "Scientists", "Archaeologists", "Inventors", "Engineers", "Artists", "Musicians", "Spies", "Bounty Hunters", "Merchants", "Blacksmiths", "Rangers", "Astronauts", "Colonists", "Teachers", "Falconers", "Beekeepers", "Lumberjacks", "Cartographers", "Diplomats", "Tailors", "Brewers", "Postal Workers", "Tinkerers", "Monks", "Nuns", "Hermits", "Rock Bands", "Orchestras", "Theater Troupes", "Opera Singers", "DJs", "Dancers", "Buskers", "Programmers", "Baristas", "Lawyers", "Realtors", "Construction Workers", "Food Truck Owners"],
-                "Environments & Cities": ["Castles", "Dungeons", "Ancient Ruins", "Lost Cities", "Floating Islands", "Deep Sea", "Jungles", "Deserts", "Frozen Lands", "Volcanoes", "Crystal Caves", "Underground Kingdoms", "Factories", "Libraries", "Museums", "Carnivals", "Theme Parks", "Schools", "Hospitals", "Prisons", "Lighthouses", "Windmills", "Greenhouses", "Marketplaces", "Shipwrecks", "Caravans", "Border Towns", "Mountain Peaks", "Coral Reefs", "Swamps", "Glaciers"],
-                "Crime & Intrigue": ["Gangsters", "Criminals", "Bandits", "Smugglers", "Mercenaries", "Detectives", "Assassins", "Royalty", "Elections", "Court Intrigue", "Revolution", "Senates", "Rebellions", "Heists", "Cons", "Mob Bosses", "Prison Breaks", "Jewel Thieves"],
-                "Festive & Everyday": ["Christmas", "Halloween", "Valentine's Day", "Easter", "Thanksgiving", "New Year's Eve", "Lunar New Year", "Carnival", "Harvest Festival", "Winter Festival", "Summer Festival", "Birthdays", "Weddings", "Funerals", "Tournaments", "Masquerade Balls", "Bakeries", "Breweries", "Restaurants", "Farmers Markets", "Street Food", "Wineries", "Tea Houses", "Natural Disasters", "Shipwreck Survivors", "Famine", "Drought", "Quarantine"],
+                "Environments & Cities": ["Castles", "Dungeons", "Ancient Ruins", "Lost Cities", "Floating Islands", "Deep Sea", "Jungles", "Deserts", "Frozen Lands", "Volcanoes", "Crystal Caves", "Underground Kingdoms", "Factories", "Libraries", "Museums", "Theme Parks", "Schools", "Hospitals", "Prisons", "Lighthouses", "Windmills", "Greenhouses", "Marketplaces", "Shipwrecks", "Caravans", "Border Towns", "Mountain Peaks", "Coral Reefs", "Swamps", "Glaciers"],
+                "Crime & Intrigue": ["Gangsters", "Criminals", "Bandits", "Smugglers", "Mercenaries", "Detectives", "Assassins", "Royalty", "Elections", "Court Intrigue", "Revolution", "Senates", "Heists", "Cons", "Mob Bosses", "Prison Breaks"],
+                "Festive & Everyday": ["Christmas", "Halloween", "Valentine's Day", "Easter", "Thanksgiving", "New Year's Eve", "Lunar New Year", "Carnival", "Harvest Festival", "Birthdays", "Weddings", "Funerals", "Tournaments", "Masquerade Balls", "Bakeries", "Breweries", "Restaurants", "Farmers Markets", "Street Food", "Wineries", "Tea Houses", "Natural Disasters", "Shipwreck Survivors", "Famine", "Drought", "Quarantine"],
                 "Objects": ["Books", "Maps", "Keys", "Masks", "Mirrors", "Crowns", "Swords", "Shields", "Coins", "Gears", "Clocks", "Candles", "Lanterns", "Potions", "Artifacts", "Treasures", "Toys", "Dolls", "Paintings", "Statues", "Marionettes", "Puppets", "Clockwork", "Stained Glass", "Mosaics", "Pottery", "Vintage Posters", "Blueprints", "Scrapbooks", "Quilts", "Ancient Scrolls", "Tarot Cards", "Music Boxes"],
                 "Animals": ["Dinosaurs", "Insects", "Dogs", "Cats", "Birds", "Horses", "Bears", "Wolves", "Sharks", "Whales", "Bees", "Ants", "Owls", "Foxes"],
                 "Vehicles": ["Trains", "Airships", "Submarines", "Spaceships", "Cars", "Planes", "Trucks", "Motorcycles", "Race Cars", "Monster Trucks", "Helicopters", "Hot Air Balloons", "Tanks", "Bicycles", "Sleds", "Gliders", "Buses", "Rickshaws", "Hovercrafts", "Demolition Derbies"],
                 "Sports": ["Soccer", "Basketball", "Baseball", "Boxing", "The Olympics", "Football", "Hockey", "Golf", "Tennis", "Racing"],
                 "Vibes": ["Cozy", "Competitive", "Simple", "Chaotic", "Relaxing", "Fast-Paced", "Tense", "Whimsical", "Grim", "Strategic", "Abstract", "Nostalgic", "Surreal", "Tactical"],
-                "Word Inspiration": ["Crux", "Redolent", "Interloper", "Deleterious", "Foible", "Saturnine", "Blandishment", "Ephemeral", "Labyrinthine", "Quixotic", "Halcyon", "Ineffable", "Mellifluous", "Sonder", "Substitute", "Combine", "Adapt", "Modify", "Put to another use", "Eliminate", "Reverse"]
+                "Word Inspiration": ["Crux", "Redolent", "Interloper", "Deleterious", "Foible", "Saturnine", "Blandishment", "Ephemeral", "Labyrinthine", "Quixotic", "Halcyon", "Ineffable", "Mellifluous", "Sonder", "Petrichor", "Susurrus", "Penumbra", "Gossamer", "Wistful", "Insidious", "Clandestine", "Vestige", "Cataclysm", "Reverie", "Enigma", "Paradox", "Iridescent", "Ineluctable", "Zenith", "Ubiquitous", "Substitute", "Combine", "Adapt", "Modify", "Put to another use", "Eliminate", "Reverse"]
             },
             components: {
                 "Cards & Dice": ["10 Cards", "a Deck of Cards", "a Single Card", "Two Decks of Cards", "Tarot Cards", "1 Die", "5 Dice", "Polyhedral Dice", "Custom Dice"],
