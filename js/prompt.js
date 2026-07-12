@@ -203,7 +203,12 @@
     } else if (parts.length === 2) {
         out = `design a game ${parts[0]} ${parts[1]}.`;
     } else if (parts.length > 2) {
-        out = `design a game ${parts.slice(0, -1).join(', ')}, while ${parts[parts.length - 1]}.`;
+        // "while" only reads naturally in front of a participle clause ("while using X").
+        // If the trailing clause has no "using" items — e.g. it's a lone "without Y" —
+        // fall back to "and" so it doesn't come out as "while without Y".
+        const lastPart = parts[parts.length - 1];
+        const joiner = /^using\b/.test(lastPart) ? 'while' : 'and';
+        out = `design a game ${parts.slice(0, -1).join(', ')}, ${joiner} ${lastPart}.`;
     }
 
     // Word inspirations as a separate sentence
