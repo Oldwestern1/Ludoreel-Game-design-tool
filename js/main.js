@@ -33,3 +33,12 @@
             initSoundToggle();
             updateSpinAvailability();
         });
+
+        // Registers the offline service worker so the installed app keeps working
+        // without a connection. Skipped on file:// (service workers require a
+        // server origin) and fails silently anywhere else that doesn't support it.
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
