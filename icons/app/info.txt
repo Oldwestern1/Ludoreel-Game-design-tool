@@ -1,0 +1,1 @@
+folder location for icons (trying to make a pwa application image)
