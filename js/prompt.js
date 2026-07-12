@@ -169,13 +169,14 @@
     // Assemble sentence parts
     const parts = [];
 
-    const themeLabels = [
-        ...standardThemes.map(h),
-        ...vibes.map(v => `a ${h(v)} tone`),
-    ];
-    if (themeLabels.length > 0) {
-        parts.push(`about ${joinList(themeLabels)}`);
-    }
+    // Theme clause: standard themes read as "about X", vibes read as "with a Tense tone"
+    // (a single shared "tone" noun even when several vibes are rolled together, e.g.
+    // "with a Tense and Strategic tone" rather than "a Tense tone and a Strategic tone").
+    // When both kinds are rolled, they're joined as two clauses: "about X, with a Y tone".
+    const themeClauses = [];
+    if (standardThemes.length > 0) themeClauses.push(`about ${joinList(standardThemes.map(h))}`);
+    if (vibes.length > 0)          themeClauses.push(`with a ${joinList(vibes.map(h))} tone`);
+    if (themeClauses.length > 0)   parts.push(themeClauses.join(', '));
 
     if (mechanicNames.length > 0) {
         const word = mechanicNames.length === 1 ? 'mechanic' : 'mechanics';
@@ -187,30 +188,38 @@
     if (withoutItems.length > 0) compParts.push(`without ${joinList(withoutItems.map(h))}`);
     if (compParts.length > 0)    parts.push(compParts.join(', '));
 
-    if (parts.length === 0) { promptBox.style.display = 'none'; return; }
+    // Nothing for a "Design a game ..." sentence — but an inspiration word or a SCAMPER
+    // prompt can still stand on its own (e.g. themes section rolled only an Inspiration
+    // word, with no standard/vibe theme, mechanic, or component to build a clause from).
+    if (parts.length === 0 && inspirations.length === 0 && !scamperKey) {
+        promptBox.style.display = 'none';
+        return;
+    }
 
     // Join parts with "while" before the component clause (matching original grammar)
-    let out;
+    let out = '';
     if (parts.length === 1) {
-        out = `Design a game ${parts[0]}.`;
+        out = `design a game ${parts[0]}.`;
     } else if (parts.length === 2) {
-        out = `Design a game ${parts[0]} ${parts[1]}.`;
-    } else {
-        out = `Design a game ${parts.slice(0, -1).join(', ')}, while ${parts[parts.length - 1]}.`;
+        out = `design a game ${parts[0]} ${parts[1]}.`;
+    } else if (parts.length > 2) {
+        out = `design a game ${parts.slice(0, -1).join(', ')}, while ${parts[parts.length - 1]}.`;
     }
 
     // Word inspirations as a separate sentence
     if (inspirations.length > 0) {
-        out += ` Use ${joinList(inspirations.map(w => `the word ${h(w)}`))} to inspire you.`;
+        const sentence = `Use ${joinList(inspirations.map(w => `the word ${h(w)}`))} to inspire you.`;
+        out = out ? `${out} ${sentence}` : sentence;
     }
 
     // SCAMPER question appended last
     if (scamperKey) {
         const m1 = mechanicNames[0] || '';
         const m2 = mechanicNames[1] || m1;
-        out += m1
-            ? ` ${SCAMPER[scamperKey](m1, m2)}`
-            : ` Apply ${h(scamperKey)} to your game design.`;
+        const sentence = m1
+            ? SCAMPER[scamperKey](m1, m2)
+            : `Apply ${h(scamperKey)} to your game design.`;
+        out = out ? `${out} ${sentence}` : sentence;
     }
 
     finalPrompt.innerHTML = out.charAt(0).toUpperCase() + out.slice(1);
