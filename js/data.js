@@ -260,7 +260,10 @@
         const INSPIRATION_SET = new Set([
             'Crux','Redolent','Interloper','Deleterious','Foible','Saturnine',
             'Blandishment','Ephemeral','Labyrinthine','Quixotic','Halcyon',
-            'Ineffable','Mellifluous','Sonder',
+            'Ineffable','Mellifluous','Sonder','Petrichor','Susurrus','Penumbra',
+            'Gossamer','Wistful','Insidious','Clandestine','Vestige','Cataclysm',
+            'Reverie','Enigma','Paradox','Iridescent','Ineluctable','Zenith',
+            'Ubiquitous',
         ]);
 
         // ─── RESULT-CARD LINKS ──────────────────────────────────────────────────────
